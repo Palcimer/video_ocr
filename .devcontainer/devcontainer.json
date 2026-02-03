@@ -1,0 +1,16 @@
+{
+  "name": "python-opencv-tesseract-dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "postCreateCommand": "pip install numpy opencv-python pytesseract",
+  "remoteUser": "root"
+}
