@@ -11,6 +11,6 @@
       ]
     }
   },
-  "postCreateCommand": "pip install numpy opencv-python pytesseract",
+  "postCreateCommand": "pip install numpy opencv-python pytesseract easyocr",
   "remoteUser": "root"
 }
