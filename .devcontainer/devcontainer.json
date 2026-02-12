@@ -7,10 +7,11 @@
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "ms-python.vscode-pylance"
+        "ms-python.vscode-pylance",
+        "Vue.volar"
       ]
     }
   },
-  "postCreateCommand": "pip install numpy opencv-python pytesseract easyocr",
+  "postCreateCommand": "pip install -r backend/requirements.txt && cd app && npm install",
   "remoteUser": "root"
 }
