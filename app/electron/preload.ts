@@ -1,24 +1,16 @@
 import { ipcRenderer, contextBridge } from 'electron'
 
-// --------- Expose some API to the Renderer process ---------
-contextBridge.exposeInMainWorld('ipcRenderer', {
-  on(...args: Parameters<typeof ipcRenderer.on>) {
-    const [channel, listener] = args
-    return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args))
+contextBridge.exposeInMainWorld('electronAPI', {
+  getServerPort: (): Promise<number | null> => {
+    return ipcRenderer.invoke('get-server-port')
   },
-  off(...args: Parameters<typeof ipcRenderer.off>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.off(channel, ...omit)
+  openVideoDialog: (): Promise<string | null> => {
+    return ipcRenderer.invoke('open-video-dialog')
   },
-  send(...args: Parameters<typeof ipcRenderer.send>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.send(channel, ...omit)
+  saveFileDialog: (defaultName: string): Promise<string | null> => {
+    return ipcRenderer.invoke('save-file-dialog', defaultName)
   },
-  invoke(...args: Parameters<typeof ipcRenderer.invoke>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.invoke(channel, ...omit)
+  writeFile: (filePath: string, content: string): Promise<boolean> => {
+    return ipcRenderer.invoke('write-file', filePath, content)
   },
-
-  // You can expose other APTs you need here.
-  // ...
 })

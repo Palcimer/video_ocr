@@ -1,55 +1,75 @@
-import { app, BrowserWindow } from 'electron'
-import { createRequire } from 'node:module'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import fs from 'node:fs'
+import { startServer, stopServer, getServerPort } from './python-server'
 
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// The built directory structure
-//
-// ├─┬─┬ dist
-// │ │ └── index.html
-// │ │
-// │ ├─┬ dist-electron
-// │ │ ├── main.js
-// │ │ └── preload.mjs
-// │
 process.env.APP_ROOT = path.join(__dirname, '..')
 
-// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
+  ? path.join(process.env.APP_ROOT, 'public')
+  : RENDERER_DIST
 
 let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    width: 1000,
+    height: 750,
+    backgroundColor: '#ffffff',
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
 
-  // Test active push message to Renderer-process.
-  win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', (new Date).toLocaleString())
-  })
-
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
   } else {
-    // win.loadFile('dist/index.html')
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
 }
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+// --- IPC 핸들러 ---
+
+ipcMain.handle('get-server-port', () => {
+  return getServerPort()
+})
+
+ipcMain.handle('open-video-dialog', async () => {
+  if (!win) return null
+  const result = await dialog.showOpenDialog(win, {
+    title: '영상 파일 선택',
+    filters: [{ name: 'MP4 Video', extensions: ['mp4'] }],
+    properties: ['openFile'],
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  return result.filePaths[0]
+})
+
+ipcMain.handle('save-file-dialog', async (_event, defaultName: string) => {
+  if (!win) return null
+  const result = await dialog.showSaveDialog(win, {
+    title: '다른 이름으로 저장',
+    defaultPath: defaultName,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+  if (result.canceled || !result.filePath) return null
+  return result.filePath
+})
+
+ipcMain.handle('write-file', async (_event, filePath: string, content: string) => {
+  fs.writeFileSync(filePath, content, 'utf-8')
+  return true
+})
+
+// --- 앱 생명주기 ---
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
@@ -58,11 +78,24 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(async () => {
+  try {
+    await startServer()
+    createWindow()
+  } catch (err) {
+    dialog.showErrorBox(
+      'FastAPI 서버 오류',
+      `서버를 시작할 수 없습니다:\n${err}`,
+    )
+    app.quit()
+  }
+})
+
+app.on('before-quit', async () => {
+  await stopServer()
+})
