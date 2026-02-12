@@ -1,30 +1,147 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import { ref, watch } from 'vue'
+import type { AppState } from './types'
+import { useOcrApi } from './composables/useOcrApi'
+import { useDialogues } from './composables/useDialogues'
+import FileLoader from './components/FileLoader.vue'
+import ProgressBar from './components/ProgressBar.vue'
+import DialogueList from './components/DialogueList.vue'
+import CropPopup from './components/CropPopup.vue'
+import SaveControls from './components/SaveControls.vue'
+
+const appState = ref<AppState>('idle')
+const showCrop = ref(false)
+const cropImageUrl = ref('')
+const videoPath = ref('')
+
+const {
+  phase, current, total,
+  dialogues: ocrDialogues,
+  isProcessing, error,
+  startOcr, getCropUrl, deleteCrops,
+} = useOcrApi()
+
+const {
+  dialogues, loadFromOcr,
+  updateSpeaker, updateText,
+  toJson, getDefaultSavePath, clear,
+} = useDialogues()
+
+// OCR 완료 감지 → editing 상태로 전환
+watch(isProcessing, (processing, wasProcessing) => {
+  if (wasProcessing && !processing && !error.value) {
+    loadFromOcr(ocrDialogues.value, videoPath.value)
+    appState.value = 'editing'
+  }
+})
+
+async function handleFileSelected(path: string) {
+  videoPath.value = path
+  clear()
+  appState.value = 'processing'
+  await startOcr(path)
+}
+
+function handleClickDialogue(index: number) {
+  const dialogue = dialogues.value[index]
+  if (dialogue) {
+    cropImageUrl.value = getCropUrl(dialogue.cropFilename)
+    showCrop.value = true
+  }
+}
+
+async function handleSave(path: string) {
+  const json = toJson()
+  if (!json) return
+  await window.electronAPI.writeFile(path, json)
+  await deleteCrops()
+}
 </script>
 
 <template>
-  <div>
-    <a href="https://electron-vite.github.io" target="_blank">
-      <img src="/electron-vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>게임 대사 OCR 추출기</h1>
+    </header>
+
+    <main class="app-main">
+      <!-- idle: 파일 선택 -->
+      <div v-if="appState === 'idle'" class="center-content">
+        <FileLoader @file-selected="handleFileSelected" />
+      </div>
+
+      <!-- processing: 진행률 표시 -->
+      <div v-else-if="appState === 'processing'" class="center-content">
+        <ProgressBar :phase="phase" :current="current" :total="total" />
+        <p v-if="error" class="error-text">{{ error }}</p>
+      </div>
+
+      <!-- editing: 대사 편집 -->
+      <div v-else-if="appState === 'editing'" class="editing-content">
+        <div class="editing-toolbar">
+          <FileLoader @file-selected="handleFileSelected" />
+          <SaveControls
+            :default-path="getDefaultSavePath()"
+            @save="handleSave"
+          />
+        </div>
+
+        <DialogueList
+          :dialogues="dialogues"
+          @update:speaker="updateSpeaker"
+          @update:text="updateText"
+          @click-dialogue="handleClickDialogue"
+        />
+      </div>
+    </main>
+
+    <CropPopup
+      :image-url="cropImageUrl"
+      :visible="showCrop"
+      @close="showCrop = false"
+    />
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.app-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+
+.app-header {
+  margin-bottom: 24px;
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+
+.app-header h1 {
+  font-size: 22px;
+  color: #333;
+}
+
+.center-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 80px;
+  gap: 16px;
+}
+
+.editing-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editing-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-text {
+  color: #d32f2f;
+  font-size: 14px;
 }
 </style>
