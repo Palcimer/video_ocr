@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { Dialogue } from '../types'
+
+const MIN_ROWS = 1
+const MAX_ROWS = 10
 
 const props = defineProps<{
   dialogue: Dialogue
 }>()
+
+const textRows = computed(() => {
+  const lineCount = props.dialogue.text.split('\n').length
+  return Math.max(MIN_ROWS, Math.min(lineCount + 1, MAX_ROWS))
+})
 
 const emit = defineEmits<{
   'update:speaker': [index: number, value: string]
@@ -49,7 +57,7 @@ function handleApplyAll() {
       class="text-input"
       :value="dialogue.text"
       placeholder="대사"
-      rows="2"
+      :rows="textRows"
       @input="emit('update:text', dialogue.index, ($event.target as HTMLTextAreaElement).value)"
       @click.stop
     />
