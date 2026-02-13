@@ -86,13 +86,19 @@ def run_ocr_pipeline(
     for i, (masked, name_roi, bubble_crop) in enumerate(collected_frames):
         crop_filename = _save_crop_image(crop_dir, i, bubble_crop)
         ocr_result = ocr_frame(masked, name_roi, lang, reader)
+        text = ocr_result["text"]
 
         dialogue = DialogueResult(
             index=i,
             speaker=ocr_result["speaker"],
-            text=ocr_result["text"],
+            text=text,
             crop_filename=crop_filename,
         )
+        # 앞 대사와 비교해서 같은 대사는 삭제
+        prev_text = results[len(results) - 1].text
+        if text.startswith(prev_text) :
+            results.pop()
+
         results.append(dialogue)
 
         on_progress(OcrProgressEvent(
