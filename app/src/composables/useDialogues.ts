@@ -13,6 +13,14 @@ function updateSpeaker(index: number, value: string) {
   dialogues.value[index].speaker = value
 }
 
+function updateSpeakerAll(oldName: string, newName: string) {
+  for (const dialogue of dialogues.value) {
+    if (dialogue.speaker === oldName) {
+      dialogue.speaker = newName
+    }
+  }
+}
+
 function updateText(index: number, value: string) {
   dialogues.value[index].text = value
 }
@@ -47,6 +55,7 @@ export function useDialogues() {
     videoPath,
     loadFromOcr,
     updateSpeaker,
+    updateSpeakerAll,
     updateText,
     toJson,
     getDefaultSavePath,

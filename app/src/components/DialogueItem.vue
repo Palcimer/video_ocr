@@ -1,15 +1,28 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Dialogue } from '../types'
 
-defineProps<{
+const props = defineProps<{
   dialogue: Dialogue
 }>()
 
 const emit = defineEmits<{
   'update:speaker': [index: number, value: string]
   'update:text': [index: number, value: string]
+  'update:speakerAll': [oldName: string, newName: string]
   click: [index: number]
 }>()
+
+const originalSpeaker = ref(props.dialogue.speaker)
+
+function handleSpeakerInput(value: string) {
+  emit('update:speaker', props.dialogue.index, value)
+}
+
+function handleApplyAll() {
+  emit('update:speakerAll', originalSpeaker.value, props.dialogue.speaker)
+  originalSpeaker.value = props.dialogue.speaker
+}
 </script>
 
 <template>
@@ -20,9 +33,17 @@ const emit = defineEmits<{
         class="speaker-input"
         :value="dialogue.speaker"
         placeholder="화자명"
-        @input="emit('update:speaker', dialogue.index, ($event.target as HTMLInputElement).value)"
+        @input="handleSpeakerInput(($event.target as HTMLInputElement).value)"
         @click.stop
       />
+      <button
+        v-if="dialogue.speaker !== originalSpeaker"
+        class="apply-all-btn"
+        title="같은 화자명 전체 변경"
+        @click.stop="handleApplyAll"
+      >
+        전체 적용
+      </button>
     </div>
     <textarea
       class="text-input"
@@ -59,6 +80,22 @@ const emit = defineEmits<{
   font-size: 12px;
   color: #999;
   min-width: 28px;
+}
+
+.apply-all-btn {
+  padding: 2px 8px;
+  font-size: 12px;
+  background-color: #eef4fb;
+  color: #4a90d9;
+  border: 1px solid #4a90d9;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.apply-all-btn:hover {
+  background-color: #4a90d9;
+  color: #ffffff;
 }
 
 .speaker-input {

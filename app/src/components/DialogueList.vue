@@ -8,6 +8,7 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:speaker': [index: number, value: string]
+  'update:speakerAll': [oldName: string, newName: string]
   'update:text': [index: number, value: string]
   clickDialogue: [index: number]
 }>()
@@ -20,6 +21,7 @@ const emit = defineEmits<{
       :key="dialogue.index"
       :dialogue="dialogue"
       @update:speaker="(i, v) => emit('update:speaker', i, v)"
+      @update:speaker-all="(old, val) => emit('update:speakerAll', old, val)"
       @update:text="(i, v) => emit('update:text', i, v)"
       @click="(i) => emit('clickDialogue', i)"
     />

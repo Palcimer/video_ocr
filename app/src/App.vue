@@ -23,7 +23,7 @@ const {
 
 const {
   dialogues, loadFromOcr,
-  updateSpeaker, updateText,
+  updateSpeaker, updateSpeakerAll, updateText,
   toJson, getDefaultSavePath, clear,
 } = useDialogues()
 
@@ -89,6 +89,7 @@ async function handleSave(path: string) {
         <DialogueList
           :dialogues="dialogues"
           @update:speaker="updateSpeaker"
+          @update:speaker-all="updateSpeakerAll"
           @update:text="updateText"
           @click-dialogue="handleClickDialogue"
         />
