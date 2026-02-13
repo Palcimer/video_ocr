@@ -8,6 +8,7 @@ import threading
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 
 from backend.models import DialogueResult, OcrProgressEvent, OcrRequest
@@ -23,6 +24,13 @@ logger = logging.getLogger(__name__)
 CROP_BASE_DIR = os.path.join(tempfile.gettempdir(), "video_ocr_crops")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # In-memory 작업 저장소 (단일 사용자 데스크톱 앱)
 jobs: dict[str, dict] = {}
