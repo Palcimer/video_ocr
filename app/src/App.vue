@@ -22,8 +22,9 @@ const {
 } = useOcrApi()
 
 const {
-  dialogues, loadFromOcr,
+  dialogues, canUndoDelete, loadFromOcr,
   updateSpeaker, updateSpeakerAll, updateText,
+  deleteDialogue, undoDelete,
   toJson, getDefaultSavePath, clear,
 } = useDialogues()
 
@@ -86,11 +87,22 @@ async function handleSave(path: string) {
           />
         </div>
 
+        <div class="editing-actions">
+          <button
+            v-if="canUndoDelete"
+            class="undo-btn"
+            @click="undoDelete"
+          >
+            삭제 취소
+          </button>
+        </div>
+
         <DialogueList
           :dialogues="dialogues"
           @update:speaker="updateSpeaker"
           @update:speaker-all="updateSpeakerAll"
           @update:text="updateText"
+          @delete="deleteDialogue"
           @click-dialogue="handleClickDialogue"
         />
       </div>
@@ -139,6 +151,26 @@ async function handleSave(path: string) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.editing-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.undo-btn {
+  padding: 4px 12px;
+  font-size: 13px;
+  background-color: #fff8e1;
+  color: #f57f17;
+  border: 1px solid #f57f17;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.undo-btn:hover {
+  background-color: #f57f17;
+  color: #ffffff;
 }
 
 .error-text {

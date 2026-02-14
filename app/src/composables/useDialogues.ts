@@ -1,12 +1,21 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { Dialogue, DialogueExport } from '../types'
+
+interface DeletedEntry {
+  dialogue: Dialogue
+  position: number
+}
 
 const dialogues = ref<Dialogue[]>([])
 const videoPath = ref<string | null>(null)
+const deletedStack = ref<DeletedEntry[]>([])
+
+const canUndoDelete = computed(() => deletedStack.value.length > 0)
 
 function loadFromOcr(results: Dialogue[], path: string) {
   dialogues.value = results
   videoPath.value = path
+  deletedStack.value = []
 }
 
 function updateSpeaker(index: number, value: string) {
@@ -23,6 +32,19 @@ function updateSpeakerAll(oldName: string, newName: string) {
 
 function updateText(index: number, value: string) {
   dialogues.value[index].text = value
+}
+
+function deleteDialogue(index: number) {
+  const pos = dialogues.value.findIndex((d) => d.index === index)
+  if (pos === -1) return
+  const [removed] = dialogues.value.splice(pos, 1)
+  deletedStack.value.push({ dialogue: removed, position: pos })
+}
+
+function undoDelete() {
+  const entry = deletedStack.value.pop()
+  if (!entry) return
+  dialogues.value.splice(entry.position, 0, entry.dialogue)
 }
 
 function toJson(): string {
@@ -47,16 +69,20 @@ function getDefaultSavePath(): string {
 function clear() {
   dialogues.value = []
   videoPath.value = null
+  deletedStack.value = []
 }
 
 export function useDialogues() {
   return {
     dialogues,
     videoPath,
+    canUndoDelete,
     loadFromOcr,
     updateSpeaker,
     updateSpeakerAll,
     updateText,
+    deleteDialogue,
+    undoDelete,
     toJson,
     getDefaultSavePath,
     clear,

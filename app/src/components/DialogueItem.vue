@@ -18,6 +18,7 @@ const emit = defineEmits<{
   'update:speaker': [index: number, value: string]
   'update:text': [index: number, value: string]
   'update:speakerAll': [oldName: string, newName: string]
+  delete: [index: number]
   click: [index: number]
 }>()
 
@@ -51,6 +52,13 @@ function handleApplyAll() {
         @click.stop="handleApplyAll"
       >
         전체 적용
+      </button>
+      <button
+        class="delete-btn"
+        title="이 대사 삭제"
+        @click.stop="emit('delete', dialogue.index)"
+      >
+        삭제
       </button>
     </div>
     <textarea
@@ -103,6 +111,22 @@ function handleApplyAll() {
 
 .apply-all-btn:hover {
   background-color: #4a90d9;
+  color: #ffffff;
+}
+
+.delete-btn {
+  padding: 2px 8px;
+  font-size: 12px;
+  background-color: #fef2f2;
+  color: #d32f2f;
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.delete-btn:hover {
+  background-color: #d32f2f;
   color: #ffffff;
 }
 

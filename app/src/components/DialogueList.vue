@@ -10,6 +10,7 @@ const emit = defineEmits<{
   'update:speaker': [index: number, value: string]
   'update:speakerAll': [oldName: string, newName: string]
   'update:text': [index: number, value: string]
+  delete: [index: number]
   clickDialogue: [index: number]
 }>()
 </script>
@@ -23,6 +24,7 @@ const emit = defineEmits<{
       @update:speaker="(i, v) => emit('update:speaker', i, v)"
       @update:speaker-all="(old, val) => emit('update:speakerAll', old, val)"
       @update:text="(i, v) => emit('update:text', i, v)"
+      @delete="(i) => emit('delete', i)"
       @click="(i) => emit('clickDialogue', i)"
     />
   </div>
