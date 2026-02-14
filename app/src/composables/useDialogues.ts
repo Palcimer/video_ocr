@@ -19,7 +19,8 @@ function loadFromOcr(results: Dialogue[], path: string) {
 }
 
 function updateSpeaker(index: number, value: string) {
-  dialogues.value[index].speaker = value
+  const d = dialogues.value.find((d) => d.index === index)
+  if (d) d.speaker = value
 }
 
 function updateSpeakerAll(oldName: string, newName: string) {
@@ -31,7 +32,8 @@ function updateSpeakerAll(oldName: string, newName: string) {
 }
 
 function updateText(index: number, value: string) {
-  dialogues.value[index].text = value
+  const d = dialogues.value.find((d) => d.index === index)
+  if (d) d.text = value
 }
 
 function deleteDialogue(index: number) {

@@ -44,7 +44,7 @@ async function handleFileSelected(path: string) {
 }
 
 function handleClickDialogue(index: number) {
-  const dialogue = dialogues.value[index]
+  const dialogue = dialogues.value.find((d) => d.index === index)
   if (dialogue) {
     cropImageUrl.value = getCropUrl(dialogue.cropFilename)
     showCrop.value = true
