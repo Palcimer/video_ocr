@@ -55,7 +55,6 @@ async function handleSave(path: string) {
   const json = toJson()
   if (!json) return
   await window.electronAPI.writeFile(path, json)
-  await deleteCrops()
 }
 </script>
 

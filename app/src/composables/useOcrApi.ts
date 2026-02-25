@@ -39,28 +39,34 @@ function resetState() {
 
 async function startOcr(videoPath: string, lang: string = 'kor') {
   const url = await ensureBaseUrl()
+  await deleteCrops()  // 이전 작업 크롭 정리
   resetState()
   isProcessing.value = true
 
-  // OCR 시작 요청
-  const res = await fetch(`${url}/ocr/start`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ video_path: videoPath, lang }),
-  })
+  try {
+    // OCR 시작 요청
+    const res = await fetch(`${url}/ocr/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ video_path: videoPath, lang }),
+    })
 
-  if (!res.ok) {
-    const detail = await res.text()
-    error.value = `OCR 시작 실패: ${detail}`
+    if (!res.ok) {
+      const detail = await res.text()
+      error.value = `OCR 시작 실패: ${detail}`
+      isProcessing.value = false
+      return
+    }
+
+    const data = await res.json()
+    jobId.value = data.job_id
+
+    // SSE 진행률 수신
+    listenProgress(url, data.job_id)
+  } catch (e) {
+    error.value = `서버 연결 실패: ${e instanceof Error ? e.message : e}`
     isProcessing.value = false
-    return
   }
-
-  const data = await res.json()
-  jobId.value = data.job_id
-
-  // SSE 진행률 수신
-  listenProgress(url, data.job_id)
 }
 
 function listenProgress(url: string, id: string) {
