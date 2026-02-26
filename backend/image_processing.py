@@ -15,9 +15,13 @@ BUBBLE_MIN_AREA_RATIO = 0.0244  # 90000 / (2560*1440)
 
 # --- 캐릭터명 영역 비율 (2560x1440 기준) ---
 NAME_REGIONS = {
-    "left":  (280 / 2560, 1257 / 1440, 550 / 2560, 1346 / 1440),
-    "right": (2049 / 2560, 1258 / 1440, 2277 / 2560, 1345 / 1440),
+    "left":  (280 / 2560, 1257 / 1440, 750 / 2560, 1346 / 1440),
+    "right": (1749 / 2560, 1258 / 1440, 2277 / 2560, 1345 / 1440),
 }
+NAME_COLOR_LOWER = np.array([190, 70, 50], np.uint8)
+NAME_COLOR_UPPER = np.array([255, 255, 255], np.uint8)
+NAME_CORNER_APPROX_EPSILON = 0.04   # 둘레 대비 허용 오차 비율
+NAME_CORNER_MAX_AREA_RATIO = 0.05   # ROI 면적 대비 코너 삼각형 최대 면적 비율
 
 # --- 프레임 변화 감지 상수 ---
 DHASH_SIZE = 8
@@ -75,12 +79,60 @@ def get_bubble_side(contour, img_w: int) -> str:
 
 
 def get_name_region(frame: np.ndarray, side: str) -> np.ndarray:
-    """프레임에서 캐릭터명 영역을 크롭한다."""
+    """프레임에서 캐릭터명 영역을 크롭하여 반환한다.
+
+    코너 삼각형 마커를 검출해 실제 텍스트 범위를 결정한다.
+    삼각형을 찾지 못하면 전체 ROI를 반환한다.
+    """
+
+    # 영역 1차 크롭
     img_h, img_w = frame.shape[:2]
     x1_r, y1_r, x2_r, y2_r = NAME_REGIONS[side]
     x1, y1 = int(img_w * x1_r), int(img_h * y1_r)
     x2, y2 = int(img_w * x2_r), int(img_h * y2_r)
-    return frame[y1:y2, x1:x2]
+    roi = frame[y1:y2, x1:x2]
+    roi_h, roi_w = roi.shape[:2]
+
+    # 마커 컬러 범위로 마스크 생성
+    color_mask = cv2.inRange(roi, NAME_COLOR_LOWER, NAME_COLOR_UPPER)
+    masked_roi = cv2.bitwise_and(roi, roi, mask=color_mask)
+
+    contours, _ = cv2.findContours(color_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # 2차 크롭 위치 변수
+    text_x_start = 0
+    text_x_end = 0
+
+    max_corner_area = roi_h * roi_w * NAME_CORNER_MAX_AREA_RATIO
+
+    for contour in contours:
+        # 마커 크기의 컨투어만 필터링
+        if cv2.contourArea(contour) > max_corner_area:
+            continue
+        # 삼각형 모양의 컨투어만 필터링
+        peri = cv2.arcLength(contour, True)
+        if peri == 0:
+            continue
+        approx = cv2.approxPolyDP(contour, NAME_CORNER_APPROX_EPSILON * peri, True)
+        if len(approx) != 3:
+            continue
+
+        x, y, w, h = cv2.boundingRect(contour)
+
+        # 왼쪽 캐릭터명일 경우 시작 마커는 0에 위치/끝 마커는 가장 x가 큰 컨투어의 x에 위치
+        if side == "left":
+            text_x_start = 0 + w
+            text_x_end = max(x, text_x_end)
+        # 오른쪽 캐릭터명일 경우 시작 마커는 가장 x가 작은 컨투어의 x에 위치/끝 마커는 오른쪽 끝에 위치
+        else:
+            text_x_start = min(x + w, text_x_end)
+            text_x_end = roi_w - w
+
+    if text_x_start >= text_x_end:
+        return masked_roi
+
+    return masked_roi[:, text_x_start:text_x_end]
+
 
 
 def create_mask(contours: list, image_shape: tuple) -> np.ndarray:
